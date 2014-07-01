@@ -83,6 +83,7 @@ SimpleModel* loadModelSTL_binary(SimpleModel *m,const char* filename, FMatrix3x3
     std::tr1::unordered_map<int, int> volumesMap;
     std::vector<SimpleVolume> volumes;
 
+    unsigned int maxColor = 0;
     for(unsigned int i=0;i<faceCount;i++)
     {
         if (fread(buffer, sizeof(float) * 3, 1, f) != 1)
@@ -112,6 +113,9 @@ SimpleModel* loadModelSTL_binary(SimpleModel *m,const char* filename, FMatrix3x3
         }else{
           color = 0;
         }
+        if (color > maxColor) {
+          maxColor = color;
+        }
 
         SimpleVolume* vol;
         std::tr1::unordered_map<int, int>::iterator it = volumesMap.find(color);
@@ -133,11 +137,16 @@ SimpleModel* loadModelSTL_binary(SimpleModel *m,const char* filename, FMatrix3x3
         }
         vol->addFace(v0, v1, v2);
     }
-    std::map<int, int> colorSortedVolumes;
-    //putting volumes into sorted map, sorts them by their key (color, ascending)
-    colorSortedVolumes.insert(volumesMap.begin(), volumesMap.end());
-    for(auto it = colorSortedVolumes.begin(); it != colorSortedVolumes.end(); it++) {
-      SimpleVolume vol = volumes.at(it->second);
+    for(unsigned int color = 0; color <= maxColor; color++) {
+      std::tr1::unordered_map<int, int>::iterator it = volumesMap.find(color);
+      SimpleVolume vol;
+      if (it == volumesMap.end()) {
+        vol = *(new SimpleVolume ());
+        cura::log("nonexistant volume for color [%d]\n", color);
+      } else {
+        vol = volumes.at(it->second);
+      }
+
       //put volumes in the model in correct order
       m->volumes.push_back(vol);
     }
